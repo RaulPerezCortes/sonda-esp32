@@ -19,10 +19,7 @@
       padding: 2rem 1rem;
     }
 
-    .container {
-      width: 100%;
-      max-width: 480px;
-    }
+    .container { width: 100%; max-width: 480px; }
 
     header {
       display: flex;
@@ -31,17 +28,8 @@
       margin-bottom: 1.5rem;
     }
 
-    .title {
-      font-size: 17px;
-      font-weight: 600;
-      letter-spacing: -0.2px;
-    }
-
-    .subtitle {
-      font-size: 12px;
-      color: #888;
-      margin-top: 2px;
-    }
+    .title { font-size: 17px; font-weight: 600; letter-spacing: -0.2px; }
+    .subtitle { font-size: 12px; color: #888; margin-top: 2px; }
 
     .badge {
       display: inline-flex;
@@ -53,18 +41,14 @@
       border-radius: 99px;
       transition: background 0.2s, color 0.2s;
     }
-    .badge.idle       { background: #e5e5e5; color: #666; }
-    .badge.scanning   { background: #ede9fe; color: #5b21b6; }
-    .badge.connected  { background: #dcfce7; color: #15803d; }
-    .badge.error      { background: #fee2e2; color: #b91c1c; }
+    .badge.idle      { background: #e5e5e5; color: #666; }
+    .badge.scanning  { background: #ede9fe; color: #5b21b6; }
+    .badge.connected { background: #dcfce7; color: #15803d; }
+    .badge.error     { background: #fee2e2; color: #b91c1c; }
 
-    .dot {
-      width: 7px; height: 7px;
-      border-radius: 50%;
-      background: currentColor;
-      opacity: 0.7;
-    }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; opacity: 0.7; }
     .badge.scanning .dot { animation: pulse 1s infinite; }
+    .badge.connected .dot { animation: pulse 2s infinite; }
     @keyframes pulse { 0%,100%{opacity:0.7} 50%{opacity:0.2} }
 
     .metrics {
@@ -82,27 +66,9 @@
       text-align: center;
     }
 
-    .metric-label {
-      font-size: 12px;
-      color: #999;
-      margin-bottom: 6px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-
-    .metric-value {
-      font-size: 40px;
-      font-weight: 600;
-      letter-spacing: -1px;
-      line-height: 1;
-    }
-
-    .metric-unit {
-      font-size: 16px;
-      font-weight: 400;
-      color: #aaa;
-      margin-top: 4px;
-    }
+    .metric-label { font-size: 12px; color: #999; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .metric-value { font-size: 40px; font-weight: 600; letter-spacing: -1px; line-height: 1; }
+    .metric-unit  { font-size: 16px; font-weight: 400; color: #aaa; margin-top: 4px; }
 
     #temp-value { color: #dc6b30; }
     #hum-value  { color: #0f9e6e; }
@@ -115,14 +81,7 @@
       margin-bottom: 1.25rem;
     }
 
-    .card-label {
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      color: #aaa;
-      margin-bottom: 10px;
-    }
-
+    .card-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #aaa; margin-bottom: 10px; }
     .chart-wrap { height: 130px; }
 
     .log {
@@ -138,11 +97,7 @@
     .log-ok  { color: #15803d; }
     .log-err { color: #b91c1c; }
 
-    .buttons {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-    }
+    .buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
     button {
       padding: 12px;
@@ -163,24 +118,7 @@
     #btn-connect    { border-color: #0f9e6e; color: #0f9e6e; }
     #btn-disconnect { border-color: #dc6b30; color: #dc6b30; }
 
-    .warn {
-      display: none;
-      margin-top: 1rem;
-      background: #fff7ed;
-      border: 1px solid #fed7aa;
-      border-radius: 10px;
-      padding: 10px 14px;
-      font-size: 12px;
-      color: #9a3412;
-      line-height: 1.5;
-    }
-
-    .last-update {
-      font-size: 11px;
-      color: #bbb;
-      text-align: center;
-      margin-top: 1rem;
-    }
+    .last-update { font-size: 11px; color: #bbb; text-align: center; margin-top: 1rem; }
   </style>
 </head>
 <body>
@@ -212,9 +150,7 @@
 
   <div class="card">
     <div class="card-label">Historial</div>
-    <div class="chart-wrap">
-      <canvas id="chart"></canvas>
-    </div>
+    <div class="chart-wrap"><canvas id="chart"></canvas></div>
   </div>
 
   <div class="card">
@@ -223,12 +159,8 @@
   </div>
 
   <div class="buttons">
-    <button id="btn-connect" onclick="connect()">⚡ Conectar</button>
-    <button id="btn-disconnect" onclick="disconnect()" disabled>✕ Desconectar</button>
-  </div>
-
-  <div class="warn" id="warn">
-    Web Bluetooth requiere Chrome en Android, Windows, macOS o Linux con Bluetooth activo. No funciona en Safari ni Firefox.
+    <button id="btn-connect" onclick="connectBLE()">⚡ Conectar</button>
+    <button id="btn-disconnect" onclick="disconnectBLE()" disabled>✕ Desconectar</button>
   </div>
 
   <div class="last-update" id="last-update"></div>
@@ -239,12 +171,12 @@
 const SERVICE_UUID = '0000181a-0000-1000-8000-00805f9b34fb';
 const TEMP_UUID    = '00002a6e-0000-1000-8000-00805f9b34fb';
 const HUM_UUID     = '00002a6f-0000-1000-8000-00805f9b34fb';
+const POLL_MS      = 2000;
 
 const MAX_POINTS = 50;
 const labels = [], tempData = [], humData = [];
-let device, tempChar, humChar;
+let device, tempChar, humChar, pollTimer;
 let tick = 0;
-let lastTemp = null, lastHum = null;
 
 const ctx = document.getElementById('chart').getContext('2d');
 const chart = new Chart(ctx, {
@@ -260,9 +192,7 @@ const chart = new Chart(ctx, {
     responsive: true,
     maintainAspectRatio: false,
     animation: false,
-    plugins: {
-      legend: { labels: { font: { size: 11 }, boxWidth: 12, padding: 10 } }
-    },
+    plugins: { legend: { labels: { font: { size: 11 }, boxWidth: 12, padding: 10 } } },
     scales: {
       x: { display: false },
       y: { ticks: { font: { size: 11 } }, grid: { color: 'rgba(0,0,0,0.05)' } }
@@ -282,9 +212,9 @@ function log(msg, type='info') {
 
 function setState(state) {
   const badge = document.getElementById('badge');
-  const txt   = document.getElementById('badge-txt');
   badge.className = 'badge ' + state;
-  txt.textContent = { idle:'Desconectado', scanning:'Buscando…', connected:'Conectado', error:'Error' }[state];
+  document.getElementById('badge-txt').textContent =
+    { idle:'Desconectado', scanning:'Buscando…', connected:'Conectado', error:'Error' }[state];
   document.getElementById('btn-connect').disabled    = state === 'connected' || state === 'scanning';
   document.getElementById('btn-disconnect').disabled = state !== 'connected';
 }
@@ -294,33 +224,44 @@ function parseF32(dv) { return dv.getFloat32(0, true); }
 function pushPoint(t, h) {
   tick++;
   labels.push(tick);
-  tempData.push(t !== null ? parseFloat(t.toFixed(1)) : (tempData[tempData.length-1] ?? null));
-  humData.push(h  !== null ? parseFloat(h.toFixed(1))  : (humData[humData.length-1]  ?? null));
+  tempData.push(parseFloat(t.toFixed(1)));
+  humData.push(parseFloat(h.toFixed(1)));
   if (labels.length > MAX_POINTS) { labels.shift(); tempData.shift(); humData.shift(); }
   chart.update('none');
 }
 
-function onTemp(e) {
-  lastTemp = parseF32(e.target.value);
-  document.getElementById('temp-value').textContent = lastTemp.toFixed(1);
-  updateTimestamp();
-  if (lastHum !== null) pushPoint(lastTemp, lastHum);
+async function poll() {
+  try {
+    const [tvDV, hvDV] = await Promise.all([
+      tempChar.readValue(),
+      humChar.readValue()
+    ]);
+    const t = parseF32(tvDV);
+    const h = parseF32(hvDV);
+    document.getElementById('temp-value').textContent = t.toFixed(1);
+    document.getElementById('hum-value').textContent  = h.toFixed(1);
+    document.getElementById('last-update').textContent =
+      'Última lectura: ' + new Date().toLocaleTimeString('es-ES');
+    pushPoint(t, h);
+  } catch(e) {
+    log('Error leyendo: ' + e.message, 'err');
+    stopPolling();
+    setState('error');
+  }
 }
 
-function onHum(e) {
-  lastHum = parseF32(e.target.value);
-  document.getElementById('hum-value').textContent = lastHum.toFixed(1);
-  updateTimestamp();
+function startPolling() {
+  poll();
+  pollTimer = setInterval(poll, POLL_MS);
 }
 
-function updateTimestamp() {
-  document.getElementById('last-update').textContent =
-    'Última lectura: ' + new Date().toLocaleTimeString('es-ES');
+function stopPolling() {
+  clearInterval(pollTimer);
+  pollTimer = null;
 }
 
-async function connect() {
+async function connectBLE() {
   if (!navigator.bluetooth) {
-    document.getElementById('warn').style.display = 'block';
     log('Web Bluetooth no disponible en este navegador', 'err');
     return;
   }
@@ -330,35 +271,33 @@ async function connect() {
     device = await navigator.bluetooth.requestDevice({
       filters: [{ services: [SERVICE_UUID] }]
     });
-    log('Dispositivo encontrado: ' + device.name);
+    log('Dispositivo: ' + device.name);
     device.addEventListener('gattserverdisconnected', onDisconnected);
     const server  = await device.gatt.connect();
     log('GATT conectado', 'ok');
     const service = await server.getPrimaryService(SERVICE_UUID);
     tempChar = await service.getCharacteristic(TEMP_UUID);
     humChar  = await service.getCharacteristic(HUM_UUID);
-    await tempChar.startNotifications();
-    await humChar.startNotifications();
-    tempChar.addEventListener('characteristicvaluechanged', onTemp);
-    humChar.addEventListener('characteristicvaluechanged',  onHum);
-    log('Recibiendo datos…', 'ok');
+    log('Leyendo cada ' + (POLL_MS/1000) + 's…', 'ok');
     setState('connected');
+    startPolling();
   } catch(e) {
     log('Error: ' + e.message, 'err');
     setState('error');
   }
 }
 
-function disconnect() {
+function disconnectBLE() {
+  stopPolling();
   if (device && device.gatt.connected) device.gatt.disconnect();
 }
 
 function onDisconnected() {
+  stopPolling();
   setState('idle');
   log('Dispositivo desconectado', 'err');
   document.getElementById('temp-value').textContent = '—';
   document.getElementById('hum-value').textContent  = '—';
-  lastTemp = null; lastHum = null;
 }
 </script>
 </body>
