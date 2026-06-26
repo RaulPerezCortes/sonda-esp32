@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ESP32 SHT31 Monitor</title>
+  <title>ESP32 SHT31 Monitor Multi-Sensor</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -19,7 +19,7 @@
       padding: 2rem 1rem;
     }
 
-    .container { width: 100%; max-width: 480px; }
+    .container { width: 100%; max-width: 600px; }
 
     header {
       display: flex;
@@ -28,7 +28,7 @@
       margin-bottom: 1.5rem;
     }
 
-    .title { font-size: 17px; font-weight: 600; letter-spacing: -0.2px; }
+    .title { font-size: 19px; font-weight: 600; letter-spacing: -0.2px; }
     .subtitle { font-size: 12px; color: #888; margin-top: 2px; }
 
     .badge {
@@ -51,27 +51,48 @@
     .badge.connected .dot { animation: pulse 2s infinite; }
     @keyframes pulse { 0%,100%{opacity:0.7} 50%{opacity:0.2} }
 
+    /* Contenedor principal de sensores */
+    .sensors-container {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      margin-bottom: 1.25rem;
+    }
+
+    .sensor-block {
+      background: #fff;
+      border: 1px solid #e8e8e8;
+      border-radius: 14px;
+      padding: 1rem;
+    }
+
+    .sensor-title {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      color: #666;
+      margin-bottom: 8px;
+      border-bottom: 1px dashed #eee;
+      padding-bottom: 4px;
+    }
+
     .metrics {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 12px;
-      margin-bottom: 1.25rem;
     }
 
     .metric {
-      background: #fff;
-      border: 1px solid #e8e8e8;
-      border-radius: 14px;
-      padding: 1.25rem 1rem;
       text-align: center;
+      padding: 0.5rem;
     }
 
-    .metric-label { font-size: 12px; color: #999; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
-    .metric-value { font-size: 40px; font-weight: 600; letter-spacing: -1px; line-height: 1; }
-    .metric-unit  { font-size: 16px; font-weight: 400; color: #aaa; margin-top: 4px; }
+    .metric-label { font-size: 11px; color: #999; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .metric-value { font-size: 32px; font-weight: 600; letter-spacing: -1px; line-height: 1; display: inline-block; }
+    .metric-unit  { font-size: 14px; font-weight: 400; color: #aaa; margin-left: 2px; display: inline-block; }
 
-    #temp-value { color: #dc6b30; }
-    #hum-value  { color: #0f9e6e; }
+    .t-color { color: #dc6b30; }
+    .h-color { color: #0f9e6e; }
 
     .card {
       background: #fff;
@@ -82,7 +103,7 @@
     }
 
     .card-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #aaa; margin-bottom: 10px; }
-    .chart-wrap { height: 130px; }
+    .chart-wrap { height: 180px; }
 
     .log {
       font-family: 'SF Mono', 'Fira Mono', monospace;
@@ -126,8 +147,8 @@
 
   <header>
     <div>
-      <div class="title">ESP32 SHT31</div>
-      <div class="subtitle">Monitor de temperatura y humedad</div>
+      <div class="title">ESP32 SHT31 Multi-Sensor</div>
+      <div class="subtitle">Monitorización simultánea por Bluetooth Serial</div>
     </div>
     <span class="badge idle" id="badge">
       <span class="dot"></span>
@@ -135,32 +156,63 @@
     </span>
   </header>
 
-  <div class="metrics">
-    <div class="metric">
-      <div class="metric-label">Temperatura</div>
-      <div class="metric-value" id="temp-value">—</div>
-      <div class="metric-unit">°C</div>
+  <div class="sensors-container">
+    <div class="sensor-block">
+      <div class="sensor-title">Sensor 1 (0x01)</div>
+      <div class="metrics">
+        <div class="metric">
+          <div class="metric-label">Temperatura</div>
+          <div class="metric-value t-color" id="s1-t">—</div><div class="metric-unit">°C</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Humedad</div>
+          <div class="metric-value h-color" id="s1-h">—</div><div class="metric-unit">%</div>
+        </div>
+      </div>
     </div>
-    <div class="metric">
-      <div class="metric-label">Humedad</div>
-      <div class="metric-value" id="hum-value">—</div>
-      <div class="metric-unit">%</div>
+
+    <div class="sensor-block">
+      <div class="sensor-title">Sensor 2 (0x02)</div>
+      <div class="metrics">
+        <div class="metric">
+          <div class="metric-label">Temperatura</div>
+          <div class="metric-value t-color" id="s2-t">—</div><div class="metric-unit">°C</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Humedad</div>
+          <div class="metric-value h-color" id="s2-h">—</div><div class="metric-unit">%</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sensor-block">
+      <div class="sensor-title">Sensor 3 (0x03)</div>
+      <div class="metrics">
+        <div class="metric">
+          <div class="metric-label">Temperatura</div>
+          <div class="metric-value t-color" id="s3-t">—</div><div class="metric-unit">°C</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Humedad</div>
+          <div class="metric-value h-color" id="s3-h">—</div><div class="metric-unit">%</div>
+        </div>
+      </div>
     </div>
   </div>
 
   <div class="card">
-    <div class="card-label">Historial</div>
+    <div class="card-label">Historial de Temperaturas</div>
     <div class="chart-wrap"><canvas id="chart"></canvas></div>
   </div>
 
   <div class="card">
-    <div class="card-label">Log</div>
+    <div class="card-label">Log del Sistema</div>
     <div class="log" id="log"></div>
   </div>
 
   <div class="buttons">
-    <button id="btn-connect" onclick="connectBLE()">⚡ Conectar</button>
-    <button id="btn-disconnect" onclick="disconnectBLE()" disabled>✕ Desconectar</button>
+    <button id="btn-connect" onclick="connectSerial()">⚡ Conectar BT</button>
+    <button id="btn-disconnect" onclick="disconnectSerial()" disabled>✕ Desconectar</button>
   </div>
 
   <div class="last-update" id="last-update"></div>
@@ -168,14 +220,11 @@
 </div>
 
 <script>
-const SERVICE_UUID = '0000181a-0000-1000-8000-00805f9b34fb';
-const TEMP_UUID    = '00002a6e-0000-1000-8000-00805f9b34fb';
-const HUM_UUID     = '00002a6f-0000-1000-8000-00805f9b34fb';
-const POLL_MS      = 2000;
-
-const MAX_POINTS = 50;
-const labels = [], tempData = [], humData = [];
-let device, tempChar, humChar, pollTimer;
+const MAX_POINTS = 30;
+const labels = [];
+// Arrays de datos independientes para las gráficas
+const s1_t_Data = [], s2_t_Data = [], s3_t_Data = [];
+let port, reader, keepReading = false;
 let tick = 0;
 
 const ctx = document.getElementById('chart').getContext('2d');
@@ -184,8 +233,9 @@ const chart = new Chart(ctx, {
   data: {
     labels,
     datasets: [
-      { label: 'Temp °C', data: tempData, borderColor: '#dc6b30', backgroundColor: 'transparent', borderWidth: 2, pointRadius: 0, tension: 0.4 },
-      { label: 'Hum %',   data: humData,  borderColor: '#0f9e6e', backgroundColor: 'transparent', borderWidth: 2, pointRadius: 0, tension: 0.4 }
+      { label: 'S1 Temp °C', data: s1_t_Data, borderColor: '#dc6b30', backgroundColor: 'transparent', borderWidth: 2, pointRadius: 0, tension: 0.4 },
+      { label: 'S2 Temp °C', data: s2_t_Data, borderColor: '#3b82f6', backgroundColor: 'transparent', borderWidth: 2, pointRadius: 0, tension: 0.4 },
+      { label: 'S3 Temp °C', data: s3_t_Data, borderColor: '#a855f7', backgroundColor: 'transparent', borderWidth: 2, pointRadius: 0, tension: 0.4 }
     ]
   },
   options: {
@@ -214,90 +264,123 @@ function setState(state) {
   const badge = document.getElementById('badge');
   badge.className = 'badge ' + state;
   document.getElementById('badge-txt').textContent =
-    { idle:'Desconectado', scanning:'Buscando…', connected:'Conectado', error:'Error' }[state];
+    { idle:'Desconectado', scanning:'Emparejando…', connected:'Conectado', error:'Error' }[state];
   document.getElementById('btn-connect').disabled    = state === 'connected' || state === 'scanning';
   document.getElementById('btn-disconnect').disabled = state !== 'connected';
 }
 
-function parseF32(dv) { return dv.getFloat32(0, true); }
-
-function pushPoint(t, h) {
+function pushPoints(t1, t2, t3) {
   tick++;
   labels.push(tick);
-  tempData.push(parseFloat(t.toFixed(1)));
-  humData.push(parseFloat(h.toFixed(1)));
-  if (labels.length > MAX_POINTS) { labels.shift(); tempData.shift(); humData.shift(); }
+  s1_t_Data.push(t1);
+  s2_t_Data.push(t2);
+  s3_t_Data.push(t3);
+  
+  if (labels.length > MAX_POINTS) {
+    labels.shift();
+    s1_t_Data.shift();
+    s2_t_Data.shift();
+    s3_t_Data.shift();
+  }
   chart.update('none');
 }
 
-async function poll() {
-  try {
-    const [tvDV, hvDV] = await Promise.all([
-      tempChar.readValue(),
-      humChar.readValue()
-    ]);
-    const t = parseF32(tvDV);
-    const h = parseF32(hvDV);
-    document.getElementById('temp-value').textContent = t.toFixed(1);
-    document.getElementById('hum-value').textContent  = h.toFixed(1);
-    document.getElementById('last-update').textContent =
-      'Última lectura: ' + new Date().toLocaleTimeString('es-ES');
-    pushPoint(t, h);
-  } catch(e) {
-    log('Error leyendo: ' + e.message, 'err');
-    stopPolling();
-    setState('error');
-  }
-}
-
-function startPolling() {
-  poll();
-  pollTimer = setInterval(poll, POLL_MS);
-}
-
-function stopPolling() {
-  clearInterval(pollTimer);
-  pollTimer = null;
-}
-
-async function connectBLE() {
-  if (!navigator.bluetooth) {
-    log('Web Bluetooth no disponible en este navegador', 'err');
+async function connectSerial() {
+  if (!navigator.serial) {
+    log('Web Serial no está soportado en este navegador. Usa Chrome o Edge.', 'err');
     return;
   }
+
   setState('scanning');
-  log('Buscando dispositivo BLE…');
+  log('Por favor, selecciona tu dispositivo Bluetooth configurado en el sistema…');
+
   try {
-    device = await navigator.bluetooth.requestDevice({
-      filters: [{ services: [SERVICE_UUID] }]
-    });
-    log('Dispositivo: ' + device.name);
-    device.addEventListener('gattserverdisconnected', onDisconnected);
-    const server  = await device.gatt.connect();
-    log('GATT conectado', 'ok');
-    const service = await server.getPrimaryService(SERVICE_UUID);
-    tempChar = await service.getCharacteristic(TEMP_UUID);
-    humChar  = await service.getCharacteristic(HUM_UUID);
-    log('Leyendo cada ' + (POLL_MS/1000) + 's…', 'ok');
+    // Solicita puerto serial (Aparecerá el menú nativo del navegador)
+    port = await navigator.serial.requestPort();
+    // Abrimos el puerto a la misma velocidad asignada en el SerialBT del ESP32
+    await port.open({ baudRate: 115200 });
+    
+    log('¡Puerto Bluetooth Serial Conectado con éxito!', 'ok');
     setState('connected');
-    startPolling();
-  } catch(e) {
-    log('Error: ' + e.message, 'err');
+    
+    keepReading = true;
+    readLoop();
+  } catch (e) {
+    log('Error al conectar: ' + e.message, 'err');
     setState('error');
   }
 }
 
-function disconnectBLE() {
-  stopPolling();
-  if (device && device.gatt.connected) device.gatt.disconnect();
+async function readLoop() {
+  const textDecoder = new TextDecoderStream();
+  const readableStreamClosed = port.readable.pipeTo(textDecoder.writable);
+  reader = textDecoder.readable.getReader();
+
+  let bufferString = "";
+
+  try {
+    while (keepReading) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      
+      if (value) {
+        bufferString += value;
+        // Procesamos si encontramos un salto de línea enviado por el ESP32 (\n)
+        if (bufferString.includes('\n')) {
+          const lines = bufferString.split('\n');
+          // Guardamos la última porción incompleta para el siguiente loop
+          bufferString = lines.pop(); 
+          
+          for (let line of lines) {
+            line = line.trim();
+            if (!line) continue;
+            
+            // Separamos los 6 valores numéricos esperados (T1,H1,T2,H2,T3,H3)
+            const valores = line.split(',');
+            if (valores.length === 6) {
+              const t1 = parseFloat(valores[0]), h1 = parseFloat(valores[1]);
+              const t2 = parseFloat(valores[2]), h2 = parseFloat(valores[3]);
+              const t3 = parseFloat(valores[4]), h3 = parseFloat(valores[5]);
+
+              // Pintar datos en el panel visual
+              document.getElementById('s1-t').textContent = t1.toFixed(1);
+              document.getElementById('s1-h').textContent = h1.toFixed(1);
+              document.getElementById('s2-t').textContent = t2.toFixed(1);
+              document.getElementById('s2-h').textContent = h2.toFixed(1);
+              document.getElementById('s3-t').textContent = t3.toFixed(1);
+              document.getElementById('s3-h').textContent = h3.toFixed(1);
+
+              document.getElementById('last-update').textContent =
+                'Última actualización: ' + new Date().toLocaleTimeString('es-ES');
+
+              // Añadir puntos a la gráfica de historial
+              pushPoints(t1, t2, t3);
+            }
+          }
+        }
+      }
+    }
+  } catch (error) {
+    log('Error durante la lectura de datos: ' + error.message, 'err');
+    setState('error');
+  } finally {
+    reader.releaseLock();
+  }
 }
 
-function onDisconnected() {
-  stopPolling();
+async function disconnectSerial() {
+  keepReading = false;
+  if (reader) {
+    await reader.cancel();
+  }
+  if (port) {
+    await port.close();
+  }
+  log('Desconectado del dispositivo serial.', 'info');
   setState('idle');
-  log('Dispositivo desconectado', 'err');
-  document.getElementById('temp-value').textContent = '—';
-  document.getElementById('hum-value').textContent  = '—';
+  
+  // Limpiar valores en pantalla
+  document.querySelectorAll('.metric-value').forEach(el => el.textContent = '—');
 }
 </script>
 </body>
