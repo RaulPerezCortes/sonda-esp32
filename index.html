@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ESP32 SHT31 Monitor Multi-Sensor</title>
+  <title>ESP32 SHT31 Monitor BLE Multi-Sensor</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -51,7 +51,6 @@
     .badge.connected .dot { animation: pulse 2s infinite; }
     @keyframes pulse { 0%,100%{opacity:0.7} 50%{opacity:0.2} }
 
-    /* Contenedor principal de sensores */
     .sensors-container {
       display: flex;
       flex-direction: column;
@@ -82,11 +81,7 @@
       gap: 12px;
     }
 
-    .metric {
-      text-align: center;
-      padding: 0.5rem;
-    }
-
+    .metric { text-align: center; padding: 0.5rem; }
     .metric-label { font-size: 11px; color: #999; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
     .metric-value { font-size: 32px; font-weight: 600; letter-spacing: -1px; line-height: 1; display: inline-block; }
     .metric-unit  { font-size: 14px; font-weight: 400; color: #aaa; margin-left: 2px; display: inline-block; }
@@ -147,8 +142,8 @@
 
   <header>
     <div>
-      <div class="title">ESP32 SHT31 Multi-Sensor</div>
-      <div class="subtitle">Monitorización simultánea por Bluetooth Serial</div>
+      <div class="title">ESP32 SHT31 Multi-Sensor BLE</div>
+      <div class="subtitle">Monitorización por Array Bluetooth Low Energy</div>
     </div>
     <span class="badge idle" id="badge">
       <span class="dot"></span>
@@ -206,13 +201,13 @@
   </div>
 
   <div class="card">
-    <div class="card-label">Log del Sistema</div>
+    <div class="card-label">Log</div>
     <div class="log" id="log"></div>
   </div>
 
   <div class="buttons">
-    <button id="btn-connect" onclick="connectSerial()">⚡ Conectar BT</button>
-    <button id="btn-disconnect" onclick="disconnectSerial()" disabled>✕ Desconectar</button>
+    <button id="btn-connect" onclick="connectBLE()">⚡ Conectar BLE</button>
+    <button id="btn-disconnect" onclick="disconnectBLE()" disabled>✕ Desconectar</button>
   </div>
 
   <div class="last-update" id="last-update"></div>
@@ -220,11 +215,14 @@
 </div>
 
 <script>
+const SERVICE_UUID = '0000181a-0000-1000-8000-00805f9b34fb';
+const DATOS_UUID   = '00002a6e-0000-1000-8000-00805f9b34fb';
+const POLL_MS      = 2500; // Sincronizado con el delay del ESP32
+
 const MAX_POINTS = 30;
 const labels = [];
-// Arrays de datos independientes para las gráficas
 const s1_t_Data = [], s2_t_Data = [], s3_t_Data = [];
-let port, reader, keepReading = false;
+let device, datosChar, pollTimer;
 let tick = 0;
 
 const ctx = document.getElementById('chart').getContext('2d');
@@ -264,7 +262,7 @@ function setState(state) {
   const badge = document.getElementById('badge');
   badge.className = 'badge ' + state;
   document.getElementById('badge-txt').textContent =
-    { idle:'Desconectado', scanning:'Emparejando…', connected:'Conectado', error:'Error' }[state];
+    { idle:'Desconectado', scanning:'Buscando…', connected:'Conectado', error:'Error' }[state];
   document.getElementById('btn-connect').disabled    = state === 'connected' || state === 'scanning';
   document.getElementById('btn-disconnect').disabled = state !== 'connected';
 }
@@ -272,114 +270,104 @@ function setState(state) {
 function pushPoints(t1, t2, t3) {
   tick++;
   labels.push(tick);
-  s1_t_Data.push(t1);
-  s2_t_Data.push(t2);
-  s3_t_Data.push(t3);
-  
-  if (labels.length > MAX_POINTS) {
-    labels.shift();
-    s1_t_Data.shift();
-    s2_t_Data.shift();
-    s3_t_Data.shift();
+  s1_t_Data.push(parseFloat(t1.toFixed(1)));
+  s2_t_Data.push(parseFloat(t2.toFixed(1)));
+  s3_t_Data.push(parseFloat(t3.toFixed(1)));
+  if (labels.length > MAX_POINTS) { 
+    labels.shift(); s1_t_Data.shift(); s2_t_Data.shift(); s3_t_Data.shift(); 
   }
   chart.update('none');
 }
 
-async function connectSerial() {
-  if (!navigator.serial) {
-    log('Web Serial no está soportado en este navegador. Usa Chrome o Edge.', 'err');
+async function poll() {
+  try {
+    // Leemos la única característica que contiene el array de 24 bytes
+    const valueDV = await datosChar.readValue();
+    
+    // Validamos que el buffer tenga la longitud correcta para 3 sensores (3 * 8 bytes = 24 bytes)
+    if (valueDV.byteLength >= 24) {
+      // Sensor 1 (offset 0)
+      const t1 = valueDV.getFloat32(0, true);
+      const h1 = valueDV.getFloat32(4, true);
+      
+      // Sensor 2 (offset 8)
+      const t2 = valueDV.getFloat32(8, true);
+      const h2 = valueDV.getFloat32(12, true);
+      
+      // Sensor 3 (offset 16)
+      const t3 = valueDV.getFloat32(16, true);
+      const h3 = valueDV.getFloat32(20, true);
+
+      // Actualizar frontend
+      document.getElementById('s1-t').textContent = t1.toFixed(1);
+      document.getElementById('s1-h').textContent = h1.toFixed(1);
+      document.getElementById('s2-t').textContent = t2.toFixed(1);
+      document.getElementById('s2-h').textContent = h2.toFixed(1);
+      document.getElementById('s3-t').textContent = t3.toFixed(1);
+      document.getElementById('s3-h').textContent = h3.toFixed(1);
+
+      document.getElementById('last-update').textContent =
+        'Última lectura: ' + new Date().toLocaleTimeString('es-ES');
+      
+      pushPoints(t1, t2, t3);
+    } else {
+      log('Buffer incompleto recibido: ' + valueDV.byteLength + ' bytes', 'err');
+    }
+  } catch(e) {
+    log('Error leyendo: ' + e.message, 'err');
+    stopPolling();
+    setState('error');
+  }
+}
+
+function startPolling() {
+  poll();
+  pollTimer = setInterval(poll, POLL_MS);
+}
+
+function stopPolling() {
+  clearInterval(pollTimer);
+  pollTimer = null;
+}
+
+async function connectBLE() {
+  if (!navigator.bluetooth) {
+    log('Web Bluetooth no disponible en este navegador (usa Chrome/Edge)', 'err');
     return;
   }
-
   setState('scanning');
-  log('Por favor, selecciona tu dispositivo Bluetooth configurado en el sistema…');
-
+  log('Buscando dispositivo BLE…');
   try {
-    // Solicita puerto serial (Aparecerá el menú nativo del navegador)
-    port = await navigator.serial.requestPort();
-    // Abrimos el puerto a la misma velocidad asignada en el SerialBT del ESP32
-    await port.open({ baudRate: 115200 });
+    device = await navigator.bluetooth.requestDevice({
+      filters: [{ services: [SERVICE_UUID] }]
+    });
+    log('Dispositivo encontrado: ' + device.name);
+    device.addEventListener('gattserverdisconnected', onDisconnected);
     
-    log('¡Puerto Bluetooth Serial Conectado con éxito!', 'ok');
+    const server  = await device.gatt.connect();
+    log('Servidor GATT conectado', 'ok');
+    
+    const service = await server.getPrimaryService(SERVICE_UUID);
+    datosChar = await service.getCharacteristic(DATOS_UUID);
+    
+    log('Conectado. Leyendo datos estructurados cada ' + (POLL_MS/1000) + 's…', 'ok');
     setState('connected');
-    
-    keepReading = true;
-    readLoop();
-  } catch (e) {
-    log('Error al conectar: ' + e.message, 'err');
+    startPolling();
+  } catch(e) {
+    log('Error: ' + e.message, 'err');
     setState('error');
   }
 }
 
-async function readLoop() {
-  const textDecoder = new TextDecoderStream();
-  const readableStreamClosed = port.readable.pipeTo(textDecoder.writable);
-  reader = textDecoder.readable.getReader();
-
-  let bufferString = "";
-
-  try {
-    while (keepReading) {
-      const { value, done } = await reader.read();
-      if (done) break;
-      
-      if (value) {
-        bufferString += value;
-        // Procesamos si encontramos un salto de línea enviado por el ESP32 (\n)
-        if (bufferString.includes('\n')) {
-          const lines = bufferString.split('\n');
-          // Guardamos la última porción incompleta para el siguiente loop
-          bufferString = lines.pop(); 
-          
-          for (let line of lines) {
-            line = line.trim();
-            if (!line) continue;
-            
-            // Separamos los 6 valores numéricos esperados (T1,H1,T2,H2,T3,H3)
-            const valores = line.split(',');
-            if (valores.length === 6) {
-              const t1 = parseFloat(valores[0]), h1 = parseFloat(valores[1]);
-              const t2 = parseFloat(valores[2]), h2 = parseFloat(valores[3]);
-              const t3 = parseFloat(valores[4]), h3 = parseFloat(valores[5]);
-
-              // Pintar datos en el panel visual
-              document.getElementById('s1-t').textContent = t1.toFixed(1);
-              document.getElementById('s1-h').textContent = h1.toFixed(1);
-              document.getElementById('s2-t').textContent = t2.toFixed(1);
-              document.getElementById('s2-h').textContent = h2.toFixed(1);
-              document.getElementById('s3-t').textContent = t3.toFixed(1);
-              document.getElementById('s3-h').textContent = h3.toFixed(1);
-
-              document.getElementById('last-update').textContent =
-                'Última actualización: ' + new Date().toLocaleTimeString('es-ES');
-
-              // Añadir puntos a la gráfica de historial
-              pushPoints(t1, t2, t3);
-            }
-          }
-        }
-      }
-    }
-  } catch (error) {
-    log('Error durante la lectura de datos: ' + error.message, 'err');
-    setState('error');
-  } finally {
-    reader.releaseLock();
-  }
+function disconnectBLE() {
+  stopPolling();
+  if (device && device.gatt.connected) device.gatt.disconnect();
 }
 
-async function disconnectSerial() {
-  keepReading = false;
-  if (reader) {
-    await reader.cancel();
-  }
-  if (port) {
-    await port.close();
-  }
-  log('Desconectado del dispositivo serial.', 'info');
+function onDisconnected() {
+  stopPolling();
   setState('idle');
-  
-  // Limpiar valores en pantalla
+  log('Dispositivo BLE desconectado', 'err');
   document.querySelectorAll('.metric-value').forEach(el => el.textContent = '—');
 }
 </script>
